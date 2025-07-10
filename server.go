@@ -3,10 +3,10 @@ package httpproxy
 import "net/http"
 
 type Server struct {
-	Logger               Logger            // logger to use, may be nil
-	Handler              http.Handler      // handler for requests that aren't proxy requests
+	Logger               Logger            // optional logger to use
+	Handler              http.Handler      // optional handler for requests that aren't proxy requests
+	RoundTripperSelector                   // optional handler to override default RoundTripper per proxy request
 	RoundTripper         http.RoundTripper // default RoundTripper, if nil uses http.DefaultTransport
-	RoundTripperSelector                   // handler to override default RoundTripper per proxy request
 }
 
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -16,6 +16,8 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		srv.proxy(w, r)
 	} else if srv.Handler != nil {
 		srv.Handler.ServeHTTP(w, r)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
 	}
 }
 
