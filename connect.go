@@ -38,28 +38,29 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 			}
 			var targetSiteCon net.Conn
 			if targetSiteCon, err = srv.DialContext(r.Context(), "tcp", host); err == nil {
-				_, _ = proxyClient.Write([]byte("HTTP/1.0 200 Connection established\r\n\r\n"))
-				targetTCP, targetOK := targetSiteCon.(halfClosable)
-				proxyClientTCP, clientOK := proxyClient.(halfClosable)
-				if targetOK && clientOK {
-					go func() {
-						defer proxyClientTCP.Close()
-						defer targetTCP.Close()
-						var wg sync.WaitGroup
-						wg.Add(2)
-						go copyAndClose(targetTCP, proxyClientTCP, &wg)
-						go copyAndClose(proxyClientTCP, targetTCP, &wg)
-						wg.Wait()
-					}()
-				} else {
-					go func() {
-						defer targetSiteCon.Close()
-						defer proxyClient.Close()
-						ch := make(chan error, 2)
-						go copyUntilClosed(ch, targetSiteCon, proxyClient)
-						go copyUntilClosed(ch, proxyClient, targetSiteCon)
-						<-ch
-					}()
+				if _, err = proxyClient.Write([]byte("HTTP/1.0 200 Connection established\r\n\r\n")); err == nil {
+					targetTCP, targetOK := targetSiteCon.(halfClosable)
+					proxyClientTCP, clientOK := proxyClient.(halfClosable)
+					if targetOK && clientOK {
+						go func() {
+							defer proxyClientTCP.Close()
+							defer targetTCP.Close()
+							var wg sync.WaitGroup
+							wg.Add(2)
+							go copyAndClose(targetTCP, proxyClientTCP, &wg)
+							go copyAndClose(proxyClientTCP, targetTCP, &wg)
+							wg.Wait()
+						}()
+					} else {
+						go func() {
+							defer targetSiteCon.Close()
+							defer proxyClient.Close()
+							ch := make(chan error, 2)
+							go copyUntilClosed(ch, targetSiteCon, proxyClient)
+							go copyUntilClosed(ch, proxyClient, targetSiteCon)
+							<-ch
+						}()
+					}
 				}
 			}
 		}
