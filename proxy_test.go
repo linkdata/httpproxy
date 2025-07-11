@@ -48,6 +48,7 @@ func TestSimpleHTTPRequest(t *testing.T) {
 
 	body, err := io.ReadAll(resp.Body)
 	maybeFatal(t, err)
+	maybeFatal(t, resp.Body.Close())
 
 	if !bytes.Equal(body, testBody) {
 		t.Errorf("status %q: got %q, wanted %q\n", resp.Status, string(body), string(testBody))
@@ -76,6 +77,7 @@ func TestUnauthorizedResponse(t *testing.T) {
 
 	body, err := io.ReadAll(resp.Body)
 	maybeFatal(t, err)
+	maybeFatal(t, resp.Body.Close())
 
 	if resp.ContentLength != int64(len(body)) {
 		t.Error("ContentLength", resp.ContentLength, "len(body)", len(body))
