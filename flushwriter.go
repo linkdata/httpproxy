@@ -14,9 +14,11 @@ type flushWriter struct {
 	WriterFlusher
 }
 
-func newFlushWriter(w io.Writer) io.Writer {
-	if wf, ok := w.(WriterFlusher); ok {
-		return flushWriter{wf}
+func maybeMakeFlushWriter(hdr http.Header, w io.Writer) io.Writer {
+	if needsFlusher(hdr) {
+		if wf, ok := w.(WriterFlusher); ok {
+			return flushWriter{wf}
+		}
 	}
 	return w
 }

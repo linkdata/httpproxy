@@ -53,3 +53,34 @@ func TestSimpleHTTPRequest(t *testing.T) {
 		t.Errorf("status %q: got %q, wanted %q\n", resp.Status, string(body), string(testBody))
 	}
 }
+
+type failCredentials struct {
+}
+
+func (s failCredentials) ValidateCredentials(username, password, _ string) bool {
+	return false
+}
+
+func TestUnauthorizedResponse(t *testing.T) {
+	destsrv := makeDestSrv(t)
+	defer destsrv.Close()
+
+	proxysrv := httptest.NewServer(&Server{
+		CredentialsValidator: failCredentials{},
+	})
+	defer proxysrv.Close()
+
+	resp, err := makeClient(t, proxysrv.URL).Get(destsrv.URL)
+	maybeFatal(t, err)
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Error(resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	maybeFatal(t, err)
+
+	if len(body) != int(resp.ContentLength) {
+		t.Error("ContentLength", resp.ContentLength, "len(body)", len(body))
+	}
+}

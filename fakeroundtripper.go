@@ -1,6 +1,7 @@
 package httpproxy
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -38,11 +39,11 @@ func (f fakeRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, err
 	code := f.StatusCode(0)
 	if code != 0 {
 		err = nil
-		var body io.ReadCloser
+		var body io.Reader = bytes.NewReader(nil)
 		var hdr http.Header
-		if f.err != nil {
+		if code == http.StatusInternalServerError && f.err != nil {
 			hdr = fakeRoundTripperHeader
-			body = io.NopCloser(strings.NewReader(f.err.Error()))
+			body = strings.NewReader(f.err.Error())
 		}
 		resp = &http.Response{
 			Request:    req,
@@ -52,7 +53,7 @@ func (f fakeRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, err
 			Status:     http.StatusText(code),
 			StatusCode: code,
 			Header:     hdr,
-			Body:       body,
+			Body:       io.NopCloser(body),
 		}
 	}
 	return

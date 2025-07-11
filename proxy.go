@@ -36,11 +36,7 @@ func (srv *Server) proxy(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		} else {
-			var copyWriter io.Writer = w
-			if needsFlusher(hdr) {
-				copyWriter = newFlushWriter(w)
-			}
-			_, err = io.Copy(copyWriter, resp.Body)
+			_, err = io.Copy(maybeMakeFlushWriter(hdr, w), resp.Body)
 			err = errors.Join(err, resp.Body.Close())
 		}
 	} else {
