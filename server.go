@@ -81,7 +81,7 @@ func (srv *Server) getRoundTripper(r *http.Request) (rt http.RoundTripper) {
 	if cd, _, err := srv.getDialer(r); err == nil {
 		rt = srv.ensureTripper(cd)
 	} else {
-		rt = failRoundTripper{err: err}
+		rt = fakeRoundTripper{err: err}
 	}
 	return
 }

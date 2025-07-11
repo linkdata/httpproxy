@@ -7,37 +7,41 @@ import (
 	"strings"
 )
 
-type failRoundTripper struct {
-	err error // error, will be rendered in response if code nonzero, otherwise returned from RoundTrip
+type fakeRoundTripper struct {
+	err error
 }
 
-var failRoundTripperHeader = http.Header{"Content-Type": {"text/plain; charset=utf-8"}}
-
-func (f failRoundTripper) WriteResponse(w io.Writer) {
-	code := f.StatusCode()
-	if code == 0 {
-		code = 500
-	}
-	_, _ = fmt.Fprintf(w, "HTTP/1.0 %03d %s\r\n\r\n", code, http.StatusText(code))
+var fakeRoundTripperHeader = http.Header{
+	"Content-Type":           {"text/plain; charset=utf-8"},
+	"X-Content-Type-Options": {"nosniff"},
 }
 
-func (f failRoundTripper) StatusCode() (code int) {
+func (f fakeRoundTripper) WriteConnectResponse(w io.Writer) (err error) {
+	code := f.StatusCode(http.StatusInternalServerError)
+	_, err = fmt.Fprintf(w, "HTTP/1.0 %03d %s\r\n\r\n", code, http.StatusText(code))
+	return
+}
+
+func (f fakeRoundTripper) StatusCode(defaultcode int) (code int) {
+	code = defaultcode
 	switch f.err {
+	case nil:
+		code = http.StatusOK
 	case ErrUnauthorized:
 		code = http.StatusUnauthorized
 	}
 	return
 }
 
-func (f failRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+func (f fakeRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	err = f.err
-	code := f.StatusCode()
+	code := f.StatusCode(0)
 	if code != 0 {
 		err = nil
 		var body io.ReadCloser
 		var hdr http.Header
 		if f.err != nil {
-			hdr = failRoundTripperHeader
+			hdr = fakeRoundTripperHeader
 			body = io.NopCloser(strings.NewReader(f.err.Error()))
 		}
 		resp = &http.Response{

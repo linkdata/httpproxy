@@ -46,7 +46,7 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 			if cd, address, err = srv.getDialer(r); err == nil {
 				var targetConn net.Conn
 				if targetConn, err = cd.DialContext(r.Context(), "tcp", address); err == nil {
-					if _, err = clientConn.Write([]byte("HTTP/1.0 200 Connection established\r\n\r\n")); err == nil {
+					if err = (fakeRoundTripper{}.WriteConnectResponse(clientConn)); err == nil {
 						targetTCP, targetOK := targetConn.(halfClosable)
 						clientTCP, clientOK := clientConn.(halfClosable)
 						if targetOK && clientOK {
@@ -76,7 +76,7 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			// hijacked ok, but dial or write failed
-			failRoundTripper{err}.WriteResponse(clientConn)
+			fakeRoundTripper{err}.WriteConnectResponse(clientConn)
 			clientConn.Close()
 			return
 		}
