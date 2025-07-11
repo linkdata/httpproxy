@@ -54,12 +54,9 @@ func TestSimpleHTTPRequest(t *testing.T) {
 	}
 }
 
-type failCredentials struct {
-}
+type failCredentials struct{}
 
-func (s failCredentials) ValidateCredentials(username, password, _ string) bool {
-	return false
-}
+func (s failCredentials) ValidateCredentials(_, _, _ string) bool { return false }
 
 func TestUnauthorizedResponse(t *testing.T) {
 	destsrv := makeDestSrv(t)
