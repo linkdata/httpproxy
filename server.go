@@ -34,6 +34,9 @@ func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 	if rt = srv.trippers[cd]; rt == nil {
+		if len(srv.trippers) > 100 {
+			clear(srv.trippers)
+		}
 		if tp, ok := http.DefaultTransport.(*http.Transport); ok {
 			tp = tp.Clone()
 			tp.DialContext = cd.DialContext
