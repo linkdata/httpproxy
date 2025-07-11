@@ -73,7 +73,7 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 					// hijacked ok, but writing connect response failed
-					targetConn.Close()
+					_ = targetConn.Close()
 				}
 			}
 			// hijacked ok, but dial or writing connect response failed

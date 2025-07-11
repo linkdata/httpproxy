@@ -32,7 +32,7 @@ func (f fakeRoundTripper) WriteResponse(w http.ResponseWriter) {
 	code := f.StatusCode(http.StatusInternalServerError)
 	w.WriteHeader(code)
 	if code == http.StatusInternalServerError && f.err != nil {
-		w.Write([]byte(f.err.Error()))
+		_, _ = w.Write([]byte(f.err.Error()))
 	}
 }
 
