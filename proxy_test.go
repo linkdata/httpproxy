@@ -80,7 +80,7 @@ func TestUnauthorizedResponse(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	maybeFatal(t, err)
 
-	if len(body) != int(resp.ContentLength) {
+	if resp.ContentLength != int64(len(body)) {
 		t.Error("ContentLength", resp.ContentLength, "len(body)", len(body))
 	}
 }
