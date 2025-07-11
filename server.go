@@ -43,6 +43,9 @@ func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
 	if rt = srv.trippers[cd]; rt == nil {
+		if srv.trippers == nil {
+			srv.trippers = make(map[ContextDialer]http.RoundTripper)
+		}
 		if len(srv.trippers) > 100 {
 			clear(srv.trippers)
 		}
