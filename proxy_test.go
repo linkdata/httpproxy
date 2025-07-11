@@ -57,16 +57,12 @@ func TestSimpleHTTPRequest(t *testing.T) {
 	}
 }
 
-type failCredentials struct{}
-
-func (failCredentials) ValidateCredentials(_, _, _ string) bool { return false }
-
 func TestUnauthorizedResponse(t *testing.T) {
 	destsrv := makeDestSrv(t)
 	defer destsrv.Close()
 
 	proxysrv := httptest.NewServer(&Server{
-		CredentialsValidator: failCredentials{},
+		CredentialsValidator: StaticCredentials{"foo": "bar"},
 	})
 	defer proxysrv.Close()
 
