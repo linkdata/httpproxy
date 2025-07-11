@@ -5,8 +5,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-
-	"github.com/linkdata/deadlock"
 )
 
 var ErrBodyNotReadWriter = errors.New("response body not an io.ReadWriter")
@@ -23,8 +21,8 @@ func (srv *Server) proxy(w http.ResponseWriter, r *http.Request) {
 		// replace headers and write them out
 		hdr := w.Header()
 		clear(hdr)
-		for k, vs := range resp.Header {
-			hdr[k] = append([]string(nil), vs...)
+		for k, vv := range resp.Header {
+			hdr[k] = append([]string{}, vv...)
 		}
 		w.WriteHeader(resp.StatusCode)
 
@@ -46,11 +44,7 @@ func (srv *Server) proxy(w http.ResponseWriter, r *http.Request) {
 			err = errors.Join(err, resp.Body.Close())
 		}
 	} else {
-		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusBadGateway)
-		if deadlock.Debug && err != nil {
-			_, _ = w.Write([]byte(err.Error()))
-		}
 	}
 
 	if err != nil && srv.Logger != nil {

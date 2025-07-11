@@ -25,8 +25,8 @@ func copyAndClose(dst, src halfClosable, wg *sync.WaitGroup) {
 func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 	err := ErrHijackingNotSupported
 	if hj, ok := w.(http.Hijacker); ok {
-		var proxyClient net.Conn
-		if proxyClient, _, err = hj.Hijack(); err == nil {
+		var clientConn net.Conn
+		if clientConn, _, err = hj.Hijack(); err == nil {
 			host := r.URL.Host
 			if r.URL.Port() == "" {
 				switch r.URL.Scheme {
@@ -36,28 +36,28 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 					host += ":443"
 				}
 			}
-			var targetSiteCon net.Conn
-			if targetSiteCon, err = srv.DialContext(r.Context(), "tcp", host); err == nil {
-				if _, err = proxyClient.Write([]byte("HTTP/1.0 200 Connection established\r\n\r\n")); err == nil {
-					targetTCP, targetOK := targetSiteCon.(halfClosable)
-					proxyClientTCP, clientOK := proxyClient.(halfClosable)
+			var targetConn net.Conn
+			if targetConn, err = srv.DialContext(r.Context(), "tcp", host); err == nil {
+				if _, err = clientConn.Write([]byte("HTTP/1.0 200 Connection established\r\n\r\n")); err == nil {
+					targetTCP, targetOK := targetConn.(halfClosable)
+					clientTCP, clientOK := clientConn.(halfClosable)
 					if targetOK && clientOK {
 						go func() {
-							defer proxyClientTCP.Close()
+							defer clientTCP.Close()
 							defer targetTCP.Close()
 							var wg sync.WaitGroup
 							wg.Add(2)
-							go copyAndClose(targetTCP, proxyClientTCP, &wg)
-							go copyAndClose(proxyClientTCP, targetTCP, &wg)
+							go copyAndClose(targetTCP, clientTCP, &wg)
+							go copyAndClose(clientTCP, targetTCP, &wg)
 							wg.Wait()
 						}()
 					} else {
 						go func() {
-							defer targetSiteCon.Close()
-							defer proxyClient.Close()
+							defer clientConn.Close()
+							defer targetConn.Close()
 							ch := make(chan error, 2)
-							go copyUntilClosed(ch, targetSiteCon, proxyClient)
-							go copyUntilClosed(ch, proxyClient, targetSiteCon)
+							go copyUntilClosed(ch, targetConn, clientConn)
+							go copyUntilClosed(ch, clientConn, targetConn)
 							<-ch
 						}()
 					}
