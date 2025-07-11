@@ -40,7 +40,7 @@ func (srv *Server) proxy(w http.ResponseWriter, r *http.Request) {
 			err = errors.Join(err, resp.Body.Close())
 		}
 	} else {
-		w.WriteHeader(http.StatusBadGateway)
+		(fakeRoundTripper{err}).WriteResponse(w)
 	}
 
 	if err != nil && srv.Logger != nil {

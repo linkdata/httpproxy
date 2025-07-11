@@ -23,15 +23,32 @@ func (f fakeRoundTripper) WriteConnectResponse(w io.Writer) (err error) {
 	return
 }
 
-func (f fakeRoundTripper) StatusCode(defaultcode int) (code int) {
+func (f fakeRoundTripper) WriteResponse(w http.ResponseWriter) {
+	hdr := w.Header()
+	clear(hdr)
+	for k, vv := range fakeRoundTripperHeader {
+		hdr[k] = append([]string{}, vv...)
+	}
+	code := f.StatusCode(http.StatusInternalServerError)
+	w.WriteHeader(code)
+	if code == http.StatusInternalServerError && f.err != nil {
+		w.Write([]byte(f.err.Error()))
+	}
+}
+
+func statusCodeFromError(defaultcode int, err error) (code int) {
 	code = defaultcode
-	switch f.err {
+	switch err {
 	case nil:
 		code = http.StatusOK
 	case ErrUnauthorized:
 		code = http.StatusUnauthorized
 	}
 	return
+}
+
+func (f fakeRoundTripper) StatusCode(defaultcode int) (code int) {
+	return statusCodeFromError(defaultcode, f.err)
 }
 
 func (f fakeRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, err error) {

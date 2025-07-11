@@ -2,6 +2,7 @@ package httpproxy
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -57,7 +58,7 @@ func TestSimpleHTTPRequest(t *testing.T) {
 
 type failCredentials struct{}
 
-func (s failCredentials) ValidateCredentials(_, _, _ string) bool { return false }
+func (failCredentials) ValidateCredentials(_, _, _ string) bool { return false }
 
 func TestUnauthorizedResponse(t *testing.T) {
 	destsrv := makeDestSrv(t)
@@ -81,5 +82,40 @@ func TestUnauthorizedResponse(t *testing.T) {
 
 	if resp.ContentLength != int64(len(body)) {
 		t.Error("ContentLength", resp.ContentLength, "len(body)", len(body))
+	}
+}
+
+type failMakeRoundTripper struct{}
+
+func (failMakeRoundTripper) MakeRoundTripper(cd ContextDialer) (rt http.RoundTripper) {
+	return fakeRoundTripper{errors.New("foo")}
+}
+
+func TestMakeRoundTripper(t *testing.T) {
+	destsrv := makeDestSrv(t)
+	defer destsrv.Close()
+
+	proxysrv := httptest.NewServer(&Server{
+		RoundTripperMaker: failMakeRoundTripper{},
+	})
+	defer proxysrv.Close()
+
+	resp, err := makeClient(t, proxysrv.URL).Get(destsrv.URL)
+	maybeFatal(t, err)
+
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Error(resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	maybeFatal(t, err)
+	maybeFatal(t, resp.Body.Close())
+
+	if resp.ContentLength != int64(len(body)) {
+		t.Error("ContentLength", resp.ContentLength, "len(body)", len(body))
+	}
+
+	if string(body) != "foo" {
+		t.Error(string(body))
 	}
 }
