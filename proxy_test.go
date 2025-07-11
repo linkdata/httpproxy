@@ -86,6 +86,40 @@ func TestUnauthorizedResponse(t *testing.T) {
 	}
 }
 
+func TestAuthorizedResponse(t *testing.T) {
+	destsrv := makeDestSrv(t)
+	defer destsrv.Close()
+
+	proxysrv := httptest.NewServer(&Server{
+		CredentialsValidator: StaticCredentials{"foo": "bar"},
+	})
+	defer proxysrv.Close()
+
+	client := makeClient(t, proxysrv.URL)
+	req, err := http.NewRequest(http.MethodGet, destsrv.URL, nil)
+	maybeFatal(t, err)
+	SetBasicAuth(req.Header, "foo", "bar")
+
+	resp, err := client.Do(req)
+	maybeFatal(t, err)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Error(resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	maybeFatal(t, err)
+	maybeFatal(t, resp.Body.Close())
+
+	if resp.ContentLength != int64(len(body)) {
+		t.Error("ContentLength", resp.ContentLength, "len(body)", len(body))
+	}
+
+	if !bytes.Equal(body, testBody) {
+		t.Errorf("status %q: got %q, wanted %q\n", resp.Status, string(body), string(testBody))
+	}
+}
+
 type failMakeRoundTripper struct{}
 
 func (failMakeRoundTripper) MakeRoundTripper(cd ContextDialer) (rt http.RoundTripper) {
