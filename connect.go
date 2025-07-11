@@ -38,8 +38,8 @@ func getAddress(u *url.URL) (address string) {
 
 func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 	err := ErrHijackingNotSupported
+	var clientConn net.Conn
 	if hj, ok := w.(http.Hijacker); ok {
-		var clientConn net.Conn
 		if clientConn, _, err = hj.Hijack(); err == nil {
 			var cd ContextDialer
 			var address string
@@ -69,20 +69,22 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 								<-ch
 							}()
 						}
+						// successfully started proxying
 						return
 					}
-					// hijacked ok, but write failed
+					// hijacked ok, but writing connect response failed
 					targetConn.Close()
 				}
 			}
-			// hijacked ok, but dial or write failed
-			fakeRoundTripper{err}.WriteConnectResponse(clientConn)
-			clientConn.Close()
-			return
+			// hijacked ok, but dial or writing connect response failed
+			_ = (fakeRoundTripper{err}.WriteConnectResponse(clientConn))
+			_ = clientConn.Close()
 		}
 	}
-	// w was not a http.Hijacker or hijack failed
-	w.WriteHeader(http.StatusInternalServerError)
+	if clientConn == nil {
+		// w was not a http.Hijacker or hijack failed
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 	if err != nil && srv.Logger != nil {
 		srv.Logger.Error("connect", "error", err)
 	}
