@@ -8,6 +8,7 @@ import (
 )
 
 var DefaultContextDialer ContextDialer = &net.Dialer{}
+var DefaultTransport = http.DefaultTransport
 
 type Server struct {
 	Logger               Logger               // optional logger to use
@@ -37,7 +38,7 @@ func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) {
 		if len(srv.trippers) > 100 {
 			clear(srv.trippers)
 		}
-		tp := http.DefaultTransport.(*http.Transport).Clone()
+		tp := DefaultTransport.(*http.Transport).Clone()
 		tp.DialContext = cd.DialContext
 		rt = tp
 		srv.trippers[cd] = rt
