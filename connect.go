@@ -41,10 +41,10 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 	if hj, ok := w.(http.Hijacker); ok {
 		var clientConn net.Conn
 		if clientConn, _, err = hj.Hijack(); err == nil {
-			var targetConn net.Conn
 			var cd ContextDialer
 			var address string
 			if cd, address, err = srv.getDialer(r); err == nil {
+				var targetConn net.Conn
 				if targetConn, err = cd.DialContext(r.Context(), "tcp", address); err == nil {
 					if _, err = clientConn.Write([]byte("HTTP/1.0 200 Connection established\r\n\r\n")); err == nil {
 						targetTCP, targetOK := targetConn.(halfClosable)
@@ -71,10 +71,12 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 						}
 						return
 					}
+					// hijacked ok, but write failed
+					targetConn.Close()
 				}
 			}
 			// hijacked ok, but dial or write failed
-			_, _ = clientConn.Write([]byte("HTTP/1.0 502 Bad Gateway\r\n\r\n"))
+			failRoundTripper{err}.WriteResponse(clientConn)
 			clientConn.Close()
 			return
 		}

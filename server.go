@@ -70,9 +70,6 @@ func (srv *Server) getRoundTripper(r *http.Request) (rt http.RoundTripper) {
 		rt = srv.ensureTripper(cd)
 	} else {
 		rt = failRoundTripper{err: err}
-		if err == ErrUnauthorized {
-			rt = failRoundTripper{code: http.StatusUnauthorized}
-		}
 	}
 	return
 }
