@@ -66,9 +66,10 @@ func (srv *Server) getDialer(r *http.Request) (cd ContextDialer, address string,
 	address = getAddress(r.URL)
 	if srv.CredentialsValidator != nil {
 		var password string
-		username, password = BasicAuth(r.Header)
-		if !srv.CredentialsValidator.ValidateCredentials(username, password, address) {
-			err = ErrUnauthorized
+		if username, password, err = BasicAuth(r.Header); err == nil {
+			if !srv.CredentialsValidator.ValidateCredentials(username, password, address) {
+				err = ErrUnauthorized
+			}
 		}
 	}
 	if err == nil {
