@@ -37,12 +37,10 @@ func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) {
 		if len(srv.trippers) > 100 {
 			clear(srv.trippers)
 		}
-		if tp, ok := http.DefaultTransport.(*http.Transport); ok {
-			tp = tp.Clone()
-			tp.DialContext = cd.DialContext
-			rt = tp
-			srv.trippers[cd] = rt
-		}
+		tp := http.DefaultTransport.(*http.Transport).Clone()
+		tp.DialContext = cd.DialContext
+		rt = tp
+		srv.trippers[cd] = rt
 	}
 	return
 }
