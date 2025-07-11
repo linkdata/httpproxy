@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -96,6 +97,7 @@ func TestMakeRoundTripper(t *testing.T) {
 	defer destsrv.Close()
 
 	proxysrv := httptest.NewServer(&Server{
+		Logger:            slog.Default(),
 		RoundTripperMaker: failMakeRoundTripper{},
 	})
 	defer proxysrv.Close()
