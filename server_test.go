@@ -102,19 +102,28 @@ func TestRoundTripperMap(t *testing.T) {
 	}
 
 	m := map[int]http.RoundTripper{}
-	for i := range maxCachedRoundTrippers {
+	for i := range MaxCachedRoundTrippers {
 		m[i] = srv.ensureTripper(testContextDialer(strconv.Itoa(i)))
 	}
-	if len(srv.trippers) != maxCachedRoundTrippers {
+	if len(srv.trippers) != MaxCachedRoundTrippers {
 		t.Fatal(len(srv.trippers))
 	}
-	for i := range maxCachedRoundTrippers {
+	for i := range MaxCachedRoundTrippers {
 		if m[i] != srv.ensureTripper(testContextDialer(strconv.Itoa(i))) {
 			t.Fatal(i)
 		}
+		if i > 0 {
+			if m[i-1] == m[i] {
+				t.Fatal(i)
+			}
+		}
 	}
-	_ = srv.ensureTripper(testContextDialer(strconv.Itoa(maxCachedRoundTrippers + 1)))
-	if len(srv.trippers) != 1 {
-		t.Fatal(len(srv.trippers))
+	_ = srv.ensureTripper(testContextDialer(strconv.Itoa(MaxCachedRoundTrippers)))
+	if len(srv.trippers) != MaxCachedRoundTrippers/2+1 {
+		t.Fatal("tripper MaxCachedRoundTrippers was in cache")
+	}
+	_ = srv.ensureTripper(testContextDialer(strconv.Itoa(MaxCachedRoundTrippers - 1)))
+	if len(srv.trippers) != MaxCachedRoundTrippers/2+1 {
+		t.Fatal("tripper MaxCachedRoundTrippers-1 should have been in cache")
 	}
 }

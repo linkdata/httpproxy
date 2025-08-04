@@ -4,19 +4,22 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"slices"
 	"sync"
 )
 
+var MaxCachedRoundTrippers = 100
 var DefaultContextDialer ContextDialer = &net.Dialer{}
 
 type Server struct {
-	Logger               Logger               // optional logger to use
-	Handler              http.Handler         // optional handler for requests that aren't proxy requests
-	DialerSelector       DialerSelector       // optional handler to select ContextDialer per proxy request, otherwise uses DefaultContextDialer
-	CredentialsValidator CredentialsValidator // optional credentials validator
-	RoundTripperMaker    RoundTripperMaker    // optional RoundTripperMaker, defaults to DefaultMakeRoundTripper
-	mu                   sync.Mutex           // protects following
-	trippers             map[ContextDialer]http.RoundTripper
+	Logger               Logger                               // optional logger to use
+	Handler              http.Handler                         // optional handler for requests that aren't proxy requests
+	DialerSelector       DialerSelector                       // optional handler to select ContextDialer per proxy request, otherwise uses DefaultContextDialer
+	CredentialsValidator CredentialsValidator                 // optional credentials validator
+	RoundTripperMaker    RoundTripperMaker                    // optional RoundTripperMaker, defaults to DefaultMakeRoundTripper
+	mu                   sync.Mutex                           // protects following
+	counter              int64                                // counts ensureTripper calls
+	trippers             map[ContextDialer]*roundTripperCache // LRU cache mapping CD -> RT
 }
 
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -39,26 +42,45 @@ func DefaultMakeRoundTripper(cd ContextDialer) http.RoundTripper {
 	return tp
 }
 
-const maxCachedRoundTrippers = 100
+func (srv *Server) cleanTripperCacheLocked() {
+	type roundTripperCacheList struct {
+		ContextDialer
+		*roundTripperCache
+	}
+	var trippers []roundTripperCacheList
+	for cd, rtc := range srv.trippers {
+		trippers = append(trippers, roundTripperCacheList{ContextDialer: cd, roundTripperCache: rtc})
+	}
+	slices.SortFunc(trippers, func(a, b roundTripperCacheList) int { return int(b.counter - a.counter) })
+	for i, rtcl := range trippers {
+		if i >= MaxCachedRoundTrippers/2 {
+			delete(srv.trippers, rtcl.ContextDialer)
+		}
+	}
+}
 
 func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
-	if rt = srv.trippers[cd]; rt == nil {
+	var rtc *roundTripperCache
+	if rtc = srv.trippers[cd]; rtc == nil {
 		if srv.trippers == nil {
-			srv.trippers = make(map[ContextDialer]http.RoundTripper)
+			srv.trippers = make(map[ContextDialer]*roundTripperCache)
 		}
-		if len(srv.trippers) >= maxCachedRoundTrippers {
-			clear(srv.trippers)
+		if len(srv.trippers) >= MaxCachedRoundTrippers {
+			srv.cleanTripperCacheLocked()
 		}
 		rtm := DefaultMakeRoundTripper
 		if srv.RoundTripperMaker != nil {
 			rtm = srv.RoundTripperMaker.MakeRoundTripper
 		}
 		rt = rtm(cd)
-		srv.trippers[cd] = rt
+		rtc = &roundTripperCache{RoundTripper: rt}
+		srv.trippers[cd] = rtc
 	}
-	return
+	srv.counter++
+	rtc.counter = srv.counter
+	return rtc.RoundTripper
 }
 
 var ErrUnauthorized = errors.New("unauthorized")
