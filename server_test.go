@@ -19,7 +19,7 @@ func (failMakeRoundTripper) MakeRoundTripper(cd ContextDialer) (rt http.RoundTri
 }
 
 func TestMakeRoundTripper(t *testing.T) {
-	destsrv := makeDestSrv(t)
+	destsrv := makeHTTPDestSrv(t)
 	defer destsrv.Close()
 
 	proxysrv := httptest.NewServer(&Server{
@@ -56,7 +56,7 @@ func (failSelectDialer) SelectDialer(username, network, address string) (cd Cont
 }
 
 func TestSelectDialer(t *testing.T) {
-	destsrv := makeDestSrv(t)
+	destsrv := makeHTTPDestSrv(t)
 	defer destsrv.Close()
 
 	proxysrv := httptest.NewServer(&Server{

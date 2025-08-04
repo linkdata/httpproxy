@@ -2,6 +2,7 @@ package httpproxy
 
 import (
 	"bytes"
+	"crypto/tls"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -18,9 +19,17 @@ func maybeFatal(t *testing.T, err error) {
 	}
 }
 
-func makeDestSrv(t *testing.T) *httptest.Server {
+func makeHTTPDestSrv(t *testing.T) *httptest.Server {
 	t.Helper()
 	destsrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(testBody)
+	}))
+	return destsrv
+}
+
+func makeHTTPSDestSrv(t *testing.T) *httptest.Server {
+	t.Helper()
+	destsrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write(testBody)
 	}))
 	return destsrv
@@ -32,12 +41,12 @@ func makeClient(t *testing.T, urlstr string) *http.Client {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tr := &http.Transport{Proxy: http.ProxyURL(u)}
+	tr := &http.Transport{Proxy: http.ProxyURL(u), TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	return &http.Client{Transport: tr}
 }
 
 func TestSimpleHTTPRequest(t *testing.T) {
-	destsrv := makeDestSrv(t)
+	destsrv := makeHTTPDestSrv(t)
 	defer destsrv.Close()
 
 	proxysrv := httptest.NewServer(&Server{})
@@ -56,7 +65,7 @@ func TestSimpleHTTPRequest(t *testing.T) {
 }
 
 func TestUnauthorizedResponse(t *testing.T) {
-	destsrv := makeDestSrv(t)
+	destsrv := makeHTTPDestSrv(t)
 	defer destsrv.Close()
 
 	proxysrv := httptest.NewServer(&Server{
@@ -81,7 +90,7 @@ func TestUnauthorizedResponse(t *testing.T) {
 }
 
 func TestAuthorizedResponse(t *testing.T) {
-	destsrv := makeDestSrv(t)
+	destsrv := makeHTTPDestSrv(t)
 	defer destsrv.Close()
 
 	proxysrv := httptest.NewServer(&Server{

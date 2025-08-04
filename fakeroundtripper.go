@@ -36,19 +36,15 @@ func (f fakeRoundTripper) WriteResponse(w http.ResponseWriter) {
 	}
 }
 
-func statusCodeFromError(defaultcode int, err error) (code int) {
+func (f fakeRoundTripper) StatusCode(defaultcode int) (code int) {
 	code = defaultcode
-	switch err {
+	switch f.err {
 	case nil:
 		code = http.StatusOK
 	case ErrUnauthorized:
 		code = http.StatusUnauthorized
 	}
 	return
-}
-
-func (f fakeRoundTripper) StatusCode(defaultcode int) (code int) {
-	return statusCodeFromError(defaultcode, f.err)
 }
 
 func (f fakeRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, err error) {
