@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
 
 type fakeRoundTripper struct {
@@ -56,10 +55,10 @@ func (f fakeRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, err
 		err = nil
 		var body io.Reader = bytes.NewReader(nil)
 		var hdr http.Header
-		if code == http.StatusInternalServerError && f.err != nil {
+		/*if code == http.StatusInternalServerError && f.err != nil {
 			hdr = fakeRoundTripperHeader
 			body = strings.NewReader(f.err.Error())
-		}
+		}*/
 		resp = &http.Response{
 			Request:    req,
 			Proto:      "HTTP/1.0",
