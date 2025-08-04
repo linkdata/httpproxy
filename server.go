@@ -39,6 +39,8 @@ func DefaultMakeRoundTripper(cd ContextDialer) http.RoundTripper {
 	return tp
 }
 
+const maxCachedRoundTrippers = 100
+
 func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) {
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
@@ -46,7 +48,7 @@ func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) {
 		if srv.trippers == nil {
 			srv.trippers = make(map[ContextDialer]http.RoundTripper)
 		}
-		if len(srv.trippers) > 100 {
+		if len(srv.trippers) >= maxCachedRoundTrippers {
 			clear(srv.trippers)
 		}
 		rtm := DefaultMakeRoundTripper

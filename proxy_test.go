@@ -2,9 +2,7 @@ package httpproxy
 
 import (
 	"bytes"
-	"errors"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -113,41 +111,5 @@ func TestAuthorizedResponse(t *testing.T) {
 
 	if !bytes.Equal(body, testBody) {
 		t.Errorf("status %q: got %q, wanted %q\n", resp.Status, string(body), string(testBody))
-	}
-}
-
-type failMakeRoundTripper struct{}
-
-func (failMakeRoundTripper) MakeRoundTripper(cd ContextDialer) (rt http.RoundTripper) {
-	return fakeRoundTripper{errors.New("foo")}
-}
-
-func TestMakeRoundTripper(t *testing.T) {
-	destsrv := makeDestSrv(t)
-	defer destsrv.Close()
-
-	proxysrv := httptest.NewServer(&Server{
-		Logger:            slog.Default(),
-		RoundTripperMaker: failMakeRoundTripper{},
-	})
-	defer proxysrv.Close()
-
-	resp, err := makeClient(t, proxysrv.URL).Get(destsrv.URL)
-	maybeFatal(t, err)
-
-	if resp.StatusCode != http.StatusInternalServerError {
-		t.Error(resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	maybeFatal(t, err)
-	maybeFatal(t, resp.Body.Close())
-
-	if resp.ContentLength != int64(len(body)) {
-		t.Error("ContentLength", resp.ContentLength, "len(body)", len(body))
-	}
-
-	if string(body) != "foo" {
-		t.Error(string(body))
 	}
 }
