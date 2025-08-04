@@ -1,7 +1,6 @@
 package httpproxy
 
 import (
-	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -82,7 +81,6 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 	}
 	if clientConn == nil {
 		// w was not a http.Hijacker or hijack failed
-		err = errors.Join(err, ErrHijackingNotSupported)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	if err != nil && srv.Logger != nil {
