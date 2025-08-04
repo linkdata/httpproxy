@@ -17,9 +17,11 @@ var fakeRoundTripperHeader = http.Header{
 	"X-Content-Type-Options": {"nosniff"},
 }
 
+var fakeRoundTripperFprintf = fmt.Fprintf
+
 func (f fakeRoundTripper) WriteConnectResponse(w io.Writer) (err error) {
 	code := f.StatusCode(http.StatusInternalServerError)
-	_, err = fmt.Fprintf(w, "HTTP/1.0 %03d %s\r\n\r\n", code, http.StatusText(code))
+	_, err = fakeRoundTripperFprintf(w, "HTTP/1.0 %03d %s\r\n\r\n", code, http.StatusText(code))
 	return
 }
 

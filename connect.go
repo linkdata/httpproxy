@@ -1,6 +1,7 @@
 package httpproxy
 
 import (
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -37,7 +38,7 @@ func getAddress(u *url.URL) (address string) {
 }
 
 func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
-	err := ErrHijackingNotSupported
+	var err error
 	var clientConn net.Conn
 	if hj, ok := w.(http.Hijacker); ok {
 		if clientConn, _, err = hj.Hijack(); err == nil {
@@ -61,9 +62,9 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 							}()
 						} else {
 							go func() {
+								ch := make(chan error, 2)
 								defer clientConn.Close()
 								defer targetConn.Close()
-								ch := make(chan error, 2)
 								go copyUntilClosed(ch, targetConn, clientConn)
 								go copyUntilClosed(ch, clientConn, targetConn)
 								<-ch
@@ -83,6 +84,7 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 	}
 	if clientConn == nil {
 		// w was not a http.Hijacker or hijack failed
+		err = errors.Join(err, ErrHijackingNotSupported)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	if err != nil && srv.Logger != nil {
