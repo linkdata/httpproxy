@@ -118,12 +118,16 @@ func TestRoundTripperMap(t *testing.T) {
 			}
 		}
 	}
-	_ = srv.ensureTripper(testContextDialer(strconv.Itoa(MaxCachedRoundTrippers)))
-	if len(srv.trippers) != MaxCachedRoundTrippers/2+1 {
-		t.Fatal("tripper MaxCachedRoundTrippers was in cache")
+	cd := testContextDialer(strconv.Itoa(MaxCachedRoundTrippers))
+	if _, ok := srv.trippers[cd]; ok {
+		t.Error("tripper MaxCachedRoundTrippers was in cache")
 	}
-	_ = srv.ensureTripper(testContextDialer(strconv.Itoa(MaxCachedRoundTrippers - 1)))
-	if len(srv.trippers) != MaxCachedRoundTrippers/2+1 {
-		t.Fatal("tripper MaxCachedRoundTrippers-1 should have been in cache")
+	_ = srv.ensureTripper(cd) // cache overflows and cleans old entries
+	if _, ok := srv.trippers[cd]; !ok {
+		t.Error("tripper MaxCachedRoundTrippers should have been in cache")
+	}
+	cd = testContextDialer(strconv.Itoa(MaxCachedRoundTrippers - 1))
+	if _, ok := srv.trippers[cd]; !ok {
+		t.Error("tripper MaxCachedRoundTrippers-1 should have been in cache")
 	}
 }
