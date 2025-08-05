@@ -5,6 +5,8 @@
 
 # httpproxy
 
-HTTP(S) and WebSocket forward proxy
+HTTP(S) and WebSocket forward proxy.
+
+Supports user authentication, ContextDialer selection per proxy request and custom RoundTripper construction.
 
 Only depends on the standard library. (Though the WebSocket tests use github.com/coder/websocket).
