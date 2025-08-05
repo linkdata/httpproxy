@@ -5,6 +5,6 @@
 
 # httpproxy
 
-HTTP(S) forward proxy
+HTTP(S) and WebSocket forward proxy
 
-Supports HTTP, HTTPS and WebSocket connections.
+Only depends on the standard library. (Though the WebSocket tests use github.com/coder/websocket).
