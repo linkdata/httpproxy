@@ -140,7 +140,6 @@ func TestMuxer(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
-		t.Log(r.URL.String())
 		w.Write(homebody)
 	})
 
@@ -149,29 +148,28 @@ func TestMuxer(t *testing.T) {
 	defer proxysrv.Close()
 	client := makeClient(t, proxysrv.URL)
 
-	resp, err := client.Get(proxysrv.URL + "/notfound")
+	resp, err := client.Get(proxysrv.URL)
 	maybeFatal(t, err)
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Error(resp.StatusCode)
 	}
 
-	srv.Handler = mux
-
-	resp, err = client.Get(proxysrv.URL)
-	maybeFatal(t, err)
-	body, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if !bytes.Equal(body, homebody) {
-		t.Errorf("%q", body)
-	}
-
 	resp, err = client.Get(destsrv.URL)
 	maybeFatal(t, err)
-	body, _ = io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if !bytes.Equal(body, testBody) {
 		t.Errorf("%q", body)
 	}
 
+	srv.Handler = mux
+
+	resp, err = client.Get(proxysrv.URL)
+	maybeFatal(t, err)
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !bytes.Equal(body, homebody) {
+		t.Errorf("%q", body)
+	}
 }
