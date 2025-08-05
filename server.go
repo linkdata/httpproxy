@@ -4,12 +4,14 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/url"
 	"slices"
 	"sync"
 )
 
 var MaxCachedRoundTrippers = 100
 var DefaultContextDialer ContextDialer = &net.Dialer{}
+var ErrUnauthorized = errors.New("unauthorized")
 
 type Server struct {
 	Logger               Logger                               // optional logger to use
@@ -83,7 +85,18 @@ func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) {
 	return rtc.RoundTripper
 }
 
-var ErrUnauthorized = errors.New("unauthorized")
+func getAddress(u *url.URL) (address string) {
+	address = u.Host
+	if u.Port() == "" {
+		switch u.Scheme {
+		case "http", "ws":
+			address += ":80"
+		case "https", "wss":
+			address += ":443"
+		}
+	}
+	return
+}
 
 func (srv *Server) getDialer(r *http.Request) (cd ContextDialer, address string, err error) {
 	var username string

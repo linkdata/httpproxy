@@ -1,40 +1,10 @@
 package httpproxy
 
 import (
-	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"sync"
 )
-
-type halfClosable interface {
-	net.Conn
-	CloseWrite() error
-	CloseRead() error
-}
-
-var _ halfClosable = (*net.TCPConn)(nil)
-
-func copyAndClose(dst, src halfClosable, wg *sync.WaitGroup) {
-	defer wg.Done()
-	_, _ = io.Copy(dst, src)
-	_ = dst.CloseWrite()
-	_ = src.CloseRead()
-}
-
-func getAddress(u *url.URL) (address string) {
-	address = u.Host
-	if u.Port() == "" {
-		switch u.Scheme {
-		case "http", "ws":
-			address += ":80"
-		case "https", "wss":
-			address += ":443"
-		}
-	}
-	return
-}
 
 func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 	var err error
@@ -60,12 +30,9 @@ func (srv *Server) connect(w http.ResponseWriter, r *http.Request) {
 						}()
 					} else {
 						go func() {
-							ch := make(chan error, 2)
 							defer clientConn.Close()
 							defer targetConn.Close()
-							go copyUntilClosed(ch, targetConn, clientConn)
-							go copyUntilClosed(ch, clientConn, targetConn)
-							<-ch
+							_ = proxyUntilClosed(targetConn, clientConn)
 						}()
 					}
 					// successfully started proxying

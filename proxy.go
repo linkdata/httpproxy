@@ -28,7 +28,7 @@ func (srv *Server) proxy(w http.ResponseWriter, r *http.Request) {
 			if clientConn, err = hijack(w); err == nil {
 				err = ErrBodyNotReadWriter
 				if wsConn, ok := resp.Body.(io.ReadWriter); ok {
-					err = proxyWebsocket(wsConn, clientConn)
+					err = proxyUntilClosed(wsConn, clientConn)
 				}
 			}
 		} else {
