@@ -9,10 +9,6 @@ import (
 
 var ErrBodyNotReadWriter = errors.New("response body not an io.ReadWriter")
 
-func needsFlusher(hdr http.Header) (yes bool) {
-	return headerContains(hdr, "Transfer-Encoding", "chunked") || headerContains(hdr, "Content-Type", "text/event-stream")
-}
-
 func (srv *Server) proxy(w http.ResponseWriter, r *http.Request) {
 	rt := srv.getRoundTripper(r)
 	RemoveRequestHeaders(r)

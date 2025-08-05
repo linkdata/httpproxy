@@ -14,6 +14,10 @@ type flushWriter struct {
 	WriterFlusher
 }
 
+func needsFlusher(hdr http.Header) (yes bool) {
+	return headerContains(hdr, "Transfer-Encoding", "chunked") || headerContains(hdr, "Content-Type", "text/event-stream")
+}
+
 func maybeMakeFlushWriter(hdr http.Header, w io.Writer) io.Writer {
 	if needsFlusher(hdr) {
 		if wf, ok := w.(WriterFlusher); ok {
