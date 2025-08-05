@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,10 +13,11 @@ import (
 )
 
 func TestSimpleWSRequest(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+
 	destsrv := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-			defer cancel()
 			c, err := websocket.Accept(w, r, nil)
 			if err == nil {
 				defer c.CloseNow()
@@ -35,10 +37,7 @@ func TestSimpleWSRequest(t *testing.T) {
 	proxysrv := httptest.NewServer(&Server{})
 	defer proxysrv.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
-	c, _, err := websocket.Dial(ctx, destsrv.URL, &websocket.DialOptions{
+	c, _, err := websocket.Dial(ctx, strings.ReplaceAll(destsrv.URL, "http:", "ws:"), &websocket.DialOptions{
 		HTTPClient: makeClient(t, proxysrv.URL),
 	})
 	if err != nil {
