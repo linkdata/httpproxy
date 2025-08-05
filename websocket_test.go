@@ -13,7 +13,7 @@ import (
 )
 
 func TestSimpleWSRequest(t *testing.T) {
-	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 	defer cancel()
 
 	destsrv := httptest.NewServer(

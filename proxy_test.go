@@ -131,7 +131,7 @@ func TestAuthorizedResponse(t *testing.T) {
 func TestChunkedResponse(t *testing.T) {
 	const want = "This is the data in the first chunk\r\nand this is the second one\r\nconsequence"
 
-	ctx, cancel := context.WithTimeout(t.Context(), time.Hour)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Minute)
 	defer cancel()
 
 	l, err := net.Listen("tcp", "localhost:0")
