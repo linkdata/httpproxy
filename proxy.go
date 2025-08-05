@@ -20,6 +20,9 @@ func (srv *Server) proxy(w http.ResponseWriter, r *http.Request) {
 		for k, vv := range resp.Header {
 			hdr[k] = append([]string{}, vv...)
 		}
+		if len(resp.TransferEncoding) > 0 {
+			hdr["Transfer-Encoding"] = resp.TransferEncoding
+		}
 		w.WriteHeader(resp.StatusCode)
 
 		// proxy the body data
