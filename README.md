@@ -4,4 +4,7 @@
 [![Docs](https://godoc.org/github.com/linkdata/httpproxy?status.svg)](https://godoc.org/github.com/linkdata/httpproxy)
 
 # httpproxy
+
 HTTP(S) forward proxy
+
+Supports HTTP, HTTPS and WebSocket connections.

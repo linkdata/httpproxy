@@ -1,6 +1,7 @@
 package httpproxy
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -95,7 +96,7 @@ func (testContextDialer) DialContext(ctx context.Context, network, address strin
 	return DefaultContextDialer.DialContext(ctx, network, address)
 }
 
-func TestRoundTripperMap(t *testing.T) {
+func TestRoundTripperCache(t *testing.T) {
 	srv := &Server{
 		Logger:         slog.Default(),
 		DialerSelector: testContextDialer(""),
@@ -130,4 +131,47 @@ func TestRoundTripperMap(t *testing.T) {
 	if _, ok := srv.trippers[cd]; !ok {
 		t.Error("tripper MaxCachedRoundTrippers-1 should have been in cache")
 	}
+}
+
+func TestMuxer(t *testing.T) {
+	var homebody = []byte("home page")
+	destsrv := makeHTTPDestSrv(t)
+	defer destsrv.Close()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
+		t.Log(r.URL.String())
+		w.Write(homebody)
+	})
+
+	srv := &Server{}
+	proxysrv := httptest.NewServer(srv)
+	defer proxysrv.Close()
+	client := makeClient(t, proxysrv.URL)
+
+	resp, err := client.Get(proxysrv.URL + "/notfound")
+	maybeFatal(t, err)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Error(resp.StatusCode)
+	}
+
+	srv.Handler = mux
+
+	resp, err = client.Get(proxysrv.URL)
+	maybeFatal(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !bytes.Equal(body, homebody) {
+		t.Errorf("%q", body)
+	}
+
+	resp, err = client.Get(destsrv.URL)
+	maybeFatal(t, err)
+	body, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !bytes.Equal(body, testBody) {
+		t.Errorf("%q", body)
+	}
+
 }

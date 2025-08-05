@@ -46,7 +46,15 @@ func makeClient(t *testing.T, urlstr string) *http.Client {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tr := &http.Transport{Proxy: http.ProxyURL(u), TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+	tr := &http.Transport{
+		Proxy: func(r *http.Request) (*url.URL, error) {
+			if r.URL.Host == u.Host {
+				return nil, nil
+			}
+			return u, nil
+		},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	return &http.Client{Transport: tr}
 }
 
