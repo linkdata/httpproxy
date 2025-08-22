@@ -1,0 +1,615 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>httpproxy: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/linkdata/httpproxy/basicauth.go (100.0%)</option>
+				
+				<option value="file1">github.com/linkdata/httpproxy/connect.go (100.0%)</option>
+				
+				<option value="file2">github.com/linkdata/httpproxy/credentialsvalidator.go (100.0%)</option>
+				
+				<option value="file3">github.com/linkdata/httpproxy/fakeroundtripper.go (100.0%)</option>
+				
+				<option value="file4">github.com/linkdata/httpproxy/flushwriter.go (100.0%)</option>
+				
+				<option value="file5">github.com/linkdata/httpproxy/hijack.go (100.0%)</option>
+				
+				<option value="file6">github.com/linkdata/httpproxy/io.go (100.0%)</option>
+				
+				<option value="file7">github.com/linkdata/httpproxy/proxy.go (100.0%)</option>
+				
+				<option value="file8">github.com/linkdata/httpproxy/removerequestheaders.go (100.0%)</option>
+				
+				<option value="file9">github.com/linkdata/httpproxy/server.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package httpproxy
+
+import (
+        "encoding/base64"
+        "net/http"
+        "strings"
+)
+
+const proxyAuthorizationHeader = "Proxy-Authorization"
+
+func GetBasicAuth(hdr http.Header) (username, password string, err error) <span class="cov10" title="2">{
+        if authkind, encoding, found := strings.Cut(hdr.Get(proxyAuthorizationHeader), " "); found &amp;&amp; authkind == "Basic" </span><span class="cov1" title="1">{
+                var userpassraw []byte
+                if userpassraw, err = base64.StdEncoding.DecodeString(encoding); err == nil </span><span class="cov1" title="1">{
+                        username, password, _ = strings.Cut(string(userpassraw), ":")
+                }</span>
+        }
+        <span class="cov10" title="2">return</span>
+}
+
+func SetBasicAuth(hdr http.Header, username, password string) <span class="cov1" title="1">{
+        hdr.Set(proxyAuthorizationHeader, "Basic "+base64.StdEncoding.EncodeToString([]byte(username+":"+password)))
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package httpproxy
+
+import (
+        "net"
+        "net/http"
+        "sync"
+)
+
+func (srv *Server) connect(w http.ResponseWriter, r *http.Request) <span class="cov10" title="4">{
+        var err error
+        var clientConn net.Conn
+        if clientConn, err = hijack(w); err == nil </span><span class="cov8" title="3">{
+                var cd ContextDialer
+                var address string
+                if cd, address, err = srv.getDialer(r); err == nil </span><span class="cov8" title="3">{
+                        var targetConn net.Conn
+                        if targetConn, err = cd.DialContext(r.Context(), "tcp", address); err == nil </span><span class="cov8" title="3">{
+                                if err = (fakeRoundTripper{}.WriteConnectResponse(clientConn)); err == nil </span><span class="cov5" title="2">{
+                                        targetTCP, targetOK := targetConn.(halfClosable)
+                                        clientTCP, clientOK := clientConn.(halfClosable)
+                                        if targetOK &amp;&amp; clientOK </span><span class="cov1" title="1">{
+                                                go func() </span><span class="cov1" title="1">{
+                                                        defer clientTCP.Close()
+                                                        defer targetTCP.Close()
+                                                        var wg sync.WaitGroup
+                                                        wg.Add(2)
+                                                        go copyAndClose(targetTCP, clientTCP, &amp;wg)
+                                                        go copyAndClose(clientTCP, targetTCP, &amp;wg)
+                                                        wg.Wait()
+                                                }</span>()
+                                        } else<span class="cov1" title="1"> {
+                                                go func() </span><span class="cov1" title="1">{
+                                                        defer clientConn.Close()
+                                                        defer targetConn.Close()
+                                                        _ = proxyUntilClosed(targetConn, clientConn)
+                                                }</span>()
+                                        }
+                                        // successfully started proxying
+                                        <span class="cov5" title="2">return</span>
+                                }
+                                // hijacked ok, but writing connect response failed
+                                <span class="cov1" title="1">_ = targetConn.Close()</span>
+                        }
+                }
+                // hijacked ok, but dial or writing connect response failed
+                <span class="cov1" title="1">_ = (fakeRoundTripper{err}.WriteConnectResponse(clientConn))
+                _ = clientConn.Close()</span>
+        }
+        <span class="cov5" title="2">if clientConn == nil </span><span class="cov1" title="1">{
+                // w was not a http.Hijacker or hijack failed
+                w.WriteHeader(http.StatusInternalServerError)
+        }</span>
+        <span class="cov5" title="2">if err != nil &amp;&amp; srv.Logger != nil </span><span class="cov5" title="2">{
+                srv.Logger.Error("connect", "error", err)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package httpproxy
+
+// CredentialsValidator is used to support user/pass authentication optional network address filtering.
+type CredentialsValidator interface {
+        ValidateCredentials(username, password, address string) bool
+}
+
+// StaticCredentials enables using a map directly as a credential store
+type StaticCredentials map[string]string
+
+func (s StaticCredentials) ValidateCredentials(username, password, _ string) bool <span class="cov10" title="2">{
+        pass, ok := s[username]
+        return ok &amp;&amp; password == pass
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package httpproxy
+
+import (
+        "bytes"
+        "fmt"
+        "io"
+        "net/http"
+)
+
+type fakeRoundTripper struct {
+        err error
+}
+
+var fakeRoundTripperHeader = http.Header{
+        "Content-Type":           {"text/plain; charset=utf-8"},
+        "X-Content-Type-Options": {"nosniff"},
+}
+
+var fakeRoundTripperFprintf = fmt.Fprintf
+
+func (f fakeRoundTripper) WriteConnectResponse(w io.Writer) (err error) <span class="cov6" title="4">{
+        code := f.StatusCode(http.StatusInternalServerError)
+        _, err = fakeRoundTripperFprintf(w, "HTTP/1.0 %03d %s\r\n\r\n", code, http.StatusText(code))
+        return
+}</span>
+
+func (f fakeRoundTripper) WriteResponse(w http.ResponseWriter) <span class="cov3" title="2">{
+        hdr := w.Header()
+        clear(hdr)
+        for k, vv := range fakeRoundTripperHeader </span><span class="cov6" title="4">{
+                hdr[k] = append([]string{}, vv...)
+        }</span>
+        <span class="cov3" title="2">code := f.StatusCode(http.StatusInternalServerError)
+        w.WriteHeader(code)
+        if code == http.StatusInternalServerError &amp;&amp; f.err != nil </span><span class="cov3" title="2">{
+                _, _ = w.Write([]byte(f.err.Error()))
+        }</span>
+}
+
+func (f fakeRoundTripper) StatusCode(defaultcode int) (code int) <span class="cov10" title="9">{
+        code = defaultcode
+        switch f.err </span>{
+        case nil:<span class="cov5" title="3">
+                code = http.StatusOK</span>
+        case ErrUnauthorized:<span class="cov1" title="1">
+                code = http.StatusUnauthorized</span>
+        }
+        <span class="cov10" title="9">return</span>
+}
+
+func (f fakeRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, err error) <span class="cov5" title="3">{
+        err = f.err
+        code := f.StatusCode(0)
+        if code != 0 </span><span class="cov1" title="1">{
+                err = nil
+                var body io.Reader = bytes.NewReader(nil)
+                var hdr http.Header
+                /*if code == http.StatusInternalServerError &amp;&amp; f.err != nil {
+                        hdr = fakeRoundTripperHeader
+                        body = strings.NewReader(f.err.Error())
+                }*/
+                resp = &amp;http.Response{
+                        Request:    req,
+                        Proto:      "HTTP/1.0",
+                        ProtoMajor: 1,
+                        ProtoMinor: 0,
+                        Status:     http.StatusText(code),
+                        StatusCode: code,
+                        Header:     hdr,
+                        Body:       io.NopCloser(body),
+                }
+        }</span>
+        <span class="cov5" title="3">return</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package httpproxy
+
+import (
+        "io"
+        "net/http"
+)
+
+type WriterFlusher interface {
+        io.Writer
+        http.Flusher
+}
+
+type flushWriter struct {
+        WriterFlusher
+}
+
+func needsFlusher(hdr http.Header) (yes bool) <span class="cov10" title="5">{
+        return headerContains(hdr, "Transfer-Encoding", "chunked") || headerContains(hdr, "Content-Type", "text/event-stream")
+}</span>
+
+func maybeMakeFlushWriter(hdr http.Header, w io.Writer) io.Writer <span class="cov10" title="5">{
+        if needsFlusher(hdr) </span><span class="cov1" title="1">{
+                if wf, ok := w.(WriterFlusher); ok </span><span class="cov1" title="1">{
+                        return flushWriter{wf}
+                }</span>
+        }
+        <span class="cov8" title="4">return w</span>
+}
+
+func (fw flushWriter) Write(p []byte) (n int, err error) <span class="cov1" title="1">{
+        n, err = fw.WriterFlusher.Write(p)
+        fw.WriterFlusher.Flush()
+        return
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package httpproxy
+
+import (
+        "errors"
+        "net"
+        "net/http"
+)
+
+var ErrHijackingNotSupported = errors.New("http.ResponseWriter does not support http.Hijacker")
+
+func hijack(w http.ResponseWriter) (conn net.Conn, err error) <span class="cov10" title="5">{
+        err = ErrHijackingNotSupported
+        if hj, ok := w.(http.Hijacker); ok </span><span class="cov8" title="4">{
+                conn, _, err = hj.Hijack()
+        }</span>
+        <span class="cov10" title="5">return</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package httpproxy
+
+import (
+        "errors"
+        "io"
+        "net"
+        "sync"
+)
+
+type halfClosable interface {
+        net.Conn
+        CloseWrite() error
+        CloseRead() error
+}
+
+var _ halfClosable = (*net.TCPConn)(nil)
+
+func copyAndClose(dst, src halfClosable, wg *sync.WaitGroup) <span class="cov5" title="2">{
+        defer wg.Done()
+        _, _ = io.Copy(dst, src)
+        _ = dst.CloseWrite()
+        _ = src.CloseRead()
+}</span>
+
+func copyUntilClosed(ch chan&lt;- error, dst io.Writer, src io.Reader) <span class="cov10" title="4">{
+        _, err := io.Copy(dst, src)
+        if errors.Is(err, net.ErrClosed) </span><span class="cov1" title="1">{
+                err = nil
+        }</span>
+        <span class="cov10" title="4">ch &lt;- err</span>
+}
+
+func proxyUntilClosed(targetConn io.ReadWriter, clientConn io.ReadWriter) error <span class="cov5" title="2">{
+        ch := make(chan error, 2)
+        go copyUntilClosed(ch, targetConn, clientConn)
+        go copyUntilClosed(ch, clientConn, targetConn)
+        return &lt;-ch
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package httpproxy
+
+import (
+        "errors"
+        "io"
+        "net"
+        "net/http"
+)
+
+var ErrBodyNotReadWriter = errors.New("response body not an io.ReadWriter")
+
+func (srv *Server) proxy(w http.ResponseWriter, r *http.Request) <span class="cov8" title="8">{
+        rt := srv.getRoundTripper(r)
+        RemoveRequestHeaders(r)
+        resp, err := rt.RoundTrip(r)
+        if err == nil &amp;&amp; resp != nil </span><span class="cov7" title="6">{
+                // replace headers and write them out
+                hdr := w.Header()
+                clear(hdr)
+                for k, vv := range resp.Header </span><span class="cov10" title="14">{
+                        hdr[k] = append([]string{}, vv...)
+                }</span>
+                <span class="cov7" title="6">if len(resp.TransferEncoding) &gt; 0 </span><span class="cov1" title="1">{
+                        hdr["Transfer-Encoding"] = resp.TransferEncoding
+                }</span>
+                <span class="cov7" title="6">w.WriteHeader(resp.StatusCode)
+
+                // proxy the body data
+                if isWebSocketHandshake(resp.Header) </span><span class="cov1" title="1">{
+                        var clientConn net.Conn
+                        if clientConn, err = hijack(w); err == nil </span><span class="cov1" title="1">{
+                                err = ErrBodyNotReadWriter
+                                if wsConn, ok := resp.Body.(io.ReadWriter); ok </span><span class="cov1" title="1">{
+                                        err = proxyUntilClosed(wsConn, clientConn)
+                                }</span>
+                        }
+                } else<span class="cov6" title="5"> {
+                        _, err = io.Copy(maybeMakeFlushWriter(hdr, w), resp.Body)
+                        err = errors.Join(err, resp.Body.Close())
+                }</span>
+        } else<span class="cov3" title="2"> {
+                (fakeRoundTripper{err}).WriteResponse(w)
+        }</span>
+
+        <span class="cov8" title="8">if err != nil &amp;&amp; srv.Logger != nil </span><span class="cov3" title="2">{
+                srv.Logger.Error("proxy", "error", err)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package httpproxy
+
+import (
+        "net/http"
+        "strings"
+)
+
+func headerContains(header http.Header, name, value string) bool <span class="cov10" title="25">{
+        for _, vv := range header[name] </span><span class="cov6" title="8">{
+                for v := range strings.SplitSeq(vv, ",") </span><span class="cov6" title="8">{
+                        for partv := range strings.SplitSeq(v, ";") </span><span class="cov7" title="11">{
+                                if strings.EqualFold(value, strings.TrimSpace(partv)) </span><span class="cov5" title="5">{
+                                        return true
+                                }</span>
+                        }
+                }
+        }
+        <span class="cov9" title="20">return false</span>
+}
+
+func isWebSocketHandshake(header http.Header) bool <span class="cov8" title="14">{
+        return headerContains(header, "Upgrade", "websocket") &amp;&amp; headerContains(header, "Connection", "Upgrade")
+}</span>
+
+// RemoveRequestHeaders removes request headers which should not propagate to the next hop.
+func RemoveRequestHeaders(r *http.Request) <span class="cov6" title="8">{
+        r.RequestURI = ""
+        delete(r.Header, "Accept-Encoding")
+        delete(r.Header, "Proxy-Connection")
+        delete(r.Header, "Proxy-Authenticate")
+        delete(r.Header, "Proxy-Authorization")
+        if !isWebSocketHandshake(r.Header) </span><span class="cov6" title="7">{
+                delete(r.Header, "Connection")
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package httpproxy
+
+import (
+        "errors"
+        "net"
+        "net/http"
+        "net/url"
+        "slices"
+        "sync"
+)
+
+var MaxCachedRoundTrippers = 100
+var DefaultContextDialer ContextDialer = &amp;net.Dialer{}
+var ErrUnauthorized = errors.New("unauthorized")
+
+type Server struct {
+        Logger               Logger                               // optional logger to use
+        Handler              http.Handler                         // optional handler for requests that aren't proxy requests
+        DialerSelector       DialerSelector                       // optional handler to select ContextDialer per proxy request, otherwise uses DefaultContextDialer
+        CredentialsValidator CredentialsValidator                 // optional credentials validator
+        RoundTripperMaker    RoundTripperMaker                    // optional RoundTripperMaker, defaults to DefaultMakeRoundTripper
+        mu                   sync.Mutex                           // protects following
+        counter              int64                                // counts ensureTripper calls
+        trippers             map[ContextDialer]*roundTripperCache // LRU cache mapping CD -&gt; RT
+}
+
+func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) <span class="cov4" title="13">{
+        if r.Method == http.MethodConnect </span><span class="cov2" title="3">{
+                srv.connect(w, r)
+        }</span> else<span class="cov4" title="10"> if r.URL.IsAbs() </span><span class="cov3" title="8">{
+                srv.proxy(w, r)
+        }</span> else<span class="cov1" title="2"> if srv.Handler != nil </span><span class="cov1" title="1">{
+                srv.Handler.ServeHTTP(w, r)
+        }</span> else<span class="cov1" title="1"> {
+                w.WriteHeader(http.StatusNotFound)
+        }</span>
+}
+
+// DefaultMakeRoundTripper clones http.DefaultTransport, sets
+// it's DialContext member and returns it.
+func DefaultMakeRoundTripper(cd ContextDialer) http.RoundTripper <span class="cov7" title="106">{
+        tp := http.DefaultTransport.(*http.Transport).Clone()
+        tp.DialContext = cd.DialContext
+        return tp
+}</span>
+
+func (srv *Server) cleanTripperCacheLocked() <span class="cov1" title="1">{
+        type roundTripperCacheList struct {
+                ContextDialer
+                *roundTripperCache
+        }
+        var trippers []roundTripperCacheList
+        for cd, rtc := range srv.trippers </span><span class="cov7" title="100">{
+                trippers = append(trippers, roundTripperCacheList{ContextDialer: cd, roundTripperCache: rtc})
+        }</span>
+        <span class="cov1" title="1">slices.SortFunc(trippers, func(a, b roundTripperCacheList) int </span><span class="cov10" title="733">{ return int(b.counter - a.counter) }</span>)
+        <span class="cov1" title="1">for i, rtcl := range trippers </span><span class="cov7" title="100">{
+                if i &gt;= MaxCachedRoundTrippers/2 </span><span class="cov6" title="50">{
+                        delete(srv.trippers, rtcl.ContextDialer)
+                }</span>
+        }
+}
+
+func (srv *Server) ensureTripper(cd ContextDialer) (rt http.RoundTripper) <span class="cov8" title="207">{
+        srv.mu.Lock()
+        defer srv.mu.Unlock()
+        var rtc *roundTripperCache
+        if rtc = srv.trippers[cd]; rtc == nil </span><span class="cov7" title="107">{
+                if srv.trippers == nil </span><span class="cov3" title="7">{
+                        srv.trippers = make(map[ContextDialer]*roundTripperCache)
+                }</span>
+                <span class="cov7" title="107">if len(srv.trippers) &gt;= MaxCachedRoundTrippers </span><span class="cov1" title="1">{
+                        srv.cleanTripperCacheLocked()
+                }</span>
+                <span class="cov7" title="107">rtm := DefaultMakeRoundTripper
+                if srv.RoundTripperMaker != nil </span><span class="cov1" title="1">{
+                        rtm = srv.RoundTripperMaker.MakeRoundTripper
+                }</span>
+                <span class="cov7" title="107">rt = rtm(cd)
+                rtc = &amp;roundTripperCache{RoundTripper: rt}
+                srv.trippers[cd] = rtc</span>
+        }
+        <span class="cov8" title="207">srv.counter++
+        rtc.counter = srv.counter
+        return rtc.RoundTripper</span>
+}
+
+func getAddress(u *url.URL) (address string) <span class="cov4" title="13">{
+        address = u.Host
+        if u.Port() == "" </span><span class="cov1" title="2">{
+                switch u.Scheme </span>{
+                case "http", "ws":<span class="cov1" title="1">
+                        address += ":80"</span>
+                case "https", "wss":<span class="cov1" title="1">
+                        address += ":443"</span>
+                }
+        }
+        <span class="cov4" title="13">return</span>
+}
+
+func (srv *Server) getDialer(r *http.Request) (cd ContextDialer, address string, err error) <span class="cov4" title="11">{
+        var username string
+        address = getAddress(r.URL)
+        if srv.CredentialsValidator != nil </span><span class="cov1" title="2">{
+                var password string
+                if username, password, err = GetBasicAuth(r.Header); err == nil </span><span class="cov1" title="2">{
+                        if !srv.CredentialsValidator.ValidateCredentials(username, password, address) </span><span class="cov1" title="1">{
+                                err = ErrUnauthorized
+                        }</span>
+                }
+        }
+        <span class="cov4" title="11">if err == nil </span><span class="cov4" title="10">{
+                cd = DefaultContextDialer
+                if srv.DialerSelector != nil </span><span class="cov1" title="1">{
+                        cd, err = srv.DialerSelector.SelectDialer(username, "tcp", address)
+                }</span>
+        }
+        <span class="cov4" title="11">return</span>
+}
+
+func (srv *Server) getRoundTripper(r *http.Request) (rt http.RoundTripper) <span class="cov3" title="8">{
+        if cd, _, err := srv.getDialer(r); err == nil </span><span class="cov3" title="6">{
+                rt = srv.ensureTripper(cd)
+        }</span> else<span class="cov1" title="2"> {
+                rt = fakeRoundTripper{err: err}
+        }</span>
+        <span class="cov3" title="8">return</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
