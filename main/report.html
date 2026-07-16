@@ -508,7 +508,7 @@ func (srv *Server) cleanTripperCacheLocked() <span class="cov1" title="1">{
         for cd, rtc := range srv.trippers </span><span class="cov7" title="100">{
                 trippers = append(trippers, roundTripperCacheList{ContextDialer: cd, roundTripperCache: rtc})
         }</span>
-        <span class="cov1" title="1">slices.SortFunc(trippers, func(a, b roundTripperCacheList) int </span><span class="cov10" title="682">{ return int(b.counter - a.counter) }</span>)
+        <span class="cov1" title="1">slices.SortFunc(trippers, func(a, b roundTripperCacheList) int </span><span class="cov10" title="632">{ return int(b.counter - a.counter) }</span>)
         <span class="cov1" title="1">for i, rtcl := range trippers </span><span class="cov7" title="100">{
                 if i &gt;= MaxCachedRoundTrippers/2 </span><span class="cov6" title="50">{
                         delete(srv.trippers, rtcl.ContextDialer)
